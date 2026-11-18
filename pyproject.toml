@@ -1,0 +1,37 @@
+[project]
+name = "resume-mass-apply"
+version = "0.1.0"
+description = "就业海投简历系统：聚合多招聘平台职位信息并按求职意向批量投递简历"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "python-multipart>=0.0.9",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "sqlalchemy>=2.0",
+    "apscheduler>=3.10",
+    "httpx>=0.27",
+    "cryptography>=42.0",
+    "pymupdf>=1.24",
+    "python-docx>=1.1",
+    "structlog>=24.1",
+    "prometheus-client>=0.20",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

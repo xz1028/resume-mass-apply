@@ -1,0 +1,33 @@
+# 运行时数据（含数据库、AES 密钥、加密简历、服务日志）—— 绝不入库
+data/
+
+# Python 构建产物
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# 测试与工具缓存
+.pytest_cache/
+.merkle-snapshot.json
+.coverage
+htmlcov/
+
+# 本地环境配置（含真实凭证时勿提交；.env.example 为安全模板）
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 前端临时校验产物
+*.png
+!app/static/**/*.png
+
+# 系统文件
+Thumbs.db
+.DS_Store

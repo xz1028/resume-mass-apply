@@ -1,0 +1,162 @@
+{
+  "industries": [
+    {
+      "industry": "互联网",
+      "companies": [
+        {"name": "腾讯", "hq_city": "深圳"},
+        {"name": "阿里巴巴", "hq_city": "杭州"},
+        {"name": "字节跳动", "hq_city": "北京"},
+        {"name": "美团", "hq_city": "北京"},
+        {"name": "百度", "hq_city": "北京"},
+        {"name": "哔哩哔哩", "hq_city": "上海"},
+        {"name": "小红书", "hq_city": "上海"},
+        {"name": "携程", "hq_city": "上海"},
+        {"name": "知乎", "hq_city": "北京"},
+        {"name": "快手", "hq_city": "北京"}
+      ]
+    },
+    {
+      "industry": "电商",
+      "companies": [
+        {"name": "京东", "hq_city": "北京"},
+        {"name": "拼多多", "hq_city": "上海"},
+        {"name": "淘天集团", "hq_city": "杭州"},
+        {"name": "唯品会", "hq_city": "广州"},
+        {"name": "得物", "hq_city": "上海"},
+        {"name": "苏宁易购", "hq_city": "南京"},
+        {"name": "希音", "hq_city": "广州"},
+        {"name": "途虎养车", "hq_city": "上海"}
+      ]
+    },
+    {
+      "industry": "游戏",
+      "companies": [
+        {"name": "网易", "hq_city": "杭州"},
+        {"name": "米哈游", "hq_city": "上海"},
+        {"name": "莉莉丝", "hq_city": "上海"},
+        {"name": "完美世界", "hq_city": "北京"},
+        {"name": "三七互娱", "hq_city": "广州"},
+        {"name": "吉比特", "hq_city": "厦门"},
+        {"name": "巨人网络", "hq_city": "上海"},
+        {"name": "西山居", "hq_city": "珠海"}
+      ]
+    },
+    {
+      "industry": "金融",
+      "companies": [
+        {"name": "招商银行", "hq_city": "深圳"},
+        {"name": "平安保险", "hq_city": "深圳"},
+        {"name": "东方财富", "hq_city": "上海"},
+        {"name": "华泰证券", "hq_city": "南京"},
+        {"name": "广发基金", "hq_city": "广州"},
+        {"name": "陆金所", "hq_city": "上海"},
+        {"name": "同花顺", "hq_city": "杭州"},
+        {"name": "湘财证券", "hq_city": "长沙"}
+      ]
+    },
+    {
+      "industry": "教育",
+      "companies": [
+        {"name": "新东方", "hq_city": "北京"},
+        {"name": "好未来", "hq_city": "北京"},
+        {"name": "猿辅导", "hq_city": "北京"},
+        {"name": "作业帮", "hq_city": "北京"},
+        {"name": "学而思", "hq_city": "北京"},
+        {"name": "中公教育", "hq_city": "北京"},
+        {"name": "华图教育", "hq_city": "北京"},
+        {"name": "粉笔科技", "hq_city": "北京"}
+      ]
+    },
+    {
+      "industry": "医疗",
+      "companies": [
+        {"name": "迈瑞医疗", "hq_city": "深圳"},
+        {"name": "药明康德", "hq_city": "上海"},
+        {"name": "联影医疗", "hq_city": "上海"},
+        {"name": "微创医疗", "hq_city": "上海"},
+        {"name": "爱尔眼科", "hq_city": "长沙"},
+        {"name": "通策医疗", "hq_city": "杭州"},
+        {"name": "金域医学", "hq_city": "广州"},
+        {"name": "万孚生物", "hq_city": "广州"}
+      ]
+    },
+    {
+      "industry": "硬件",
+      "companies": [
+        {"name": "华为", "hq_city": "深圳"},
+        {"name": "大疆", "hq_city": "深圳"},
+        {"name": "OPPO", "hq_city": "深圳"},
+        {"name": "vivo", "hq_city": "深圳"},
+        {"name": "小米", "hq_city": "北京"},
+        {"name": "联想", "hq_city": "北京"},
+        {"name": "海尔", "hq_city": "青岛"},
+        {"name": "TCL", "hq_city": "惠州"}
+      ]
+    },
+    {
+      "industry": "制造业",
+      "companies": [
+        {"name": "比亚迪", "hq_city": "深圳"},
+        {"name": "格力电器", "hq_city": "珠海"},
+        {"name": "宁德时代", "hq_city": "宁波"},
+        {"name": "三一重工", "hq_city": "长沙"},
+        {"name": "徐工集团", "hq_city": "南京"},
+        {"name": "美的集团", "hq_city": "佛山"},
+        {"name": "中联重科", "hq_city": "长沙"},
+        {"name": "福耀玻璃", "hq_city": "福州"}
+      ]
+    },
+    {
+      "industry": "房地产",
+      "companies": [
+        {"name": "万科地产", "hq_city": "深圳"},
+        {"name": "保利发展", "hq_city": "广州"},
+        {"name": "龙湖集团", "hq_city": "北京"},
+        {"name": "链家", "hq_city": "北京"},
+        {"name": "贝壳", "hq_city": "北京"},
+        {"name": "我爱我家", "hq_city": "北京"},
+        {"name": "中原地产", "hq_city": "上海"},
+        {"name": "世联行", "hq_city": "深圳"}
+      ]
+    },
+    {
+      "industry": "咨询",
+      "companies": [
+        {"name": "埃森哲", "hq_city": "上海"},
+        {"name": "麦肯锡", "hq_city": "上海"},
+        {"name": "波士顿咨询", "hq_city": "上海"},
+        {"name": "德勤", "hq_city": "上海"},
+        {"name": "普华永道", "hq_city": "上海"},
+        {"name": "毕马威", "hq_city": "北京"},
+        {"name": "君合律所", "hq_city": "北京"},
+        {"name": "中金公司", "hq_city": "北京"}
+      ]
+    },
+    {
+      "industry": "传媒",
+      "companies": [
+        {"name": "分众传媒", "hq_city": "上海"},
+        {"name": "芒果超媒", "hq_city": "长沙"},
+        {"name": "光线传媒", "hq_city": "北京"},
+        {"name": "华策影视", "hq_city": "杭州"},
+        {"name": "中文在线", "hq_city": "北京"},
+        {"name": "掌阅科技", "hq_city": "北京"},
+        {"name": "值得买", "hq_city": "北京"},
+        {"name": "阅文集团", "hq_city": "上海"}
+      ]
+    },
+    {
+      "industry": "物流",
+      "companies": [
+        {"name": "顺丰速运", "hq_city": "深圳"},
+        {"name": "满帮集团", "hq_city": "南京"},
+        {"name": "京东物流", "hq_city": "北京"},
+        {"name": "菜鸟网络", "hq_city": "杭州"},
+        {"name": "中通快递", "hq_city": "上海"},
+        {"name": "圆通速递", "hq_city": "上海"},
+        {"name": "极兔速递", "hq_city": "上海"},
+        {"name": "德邦物流", "hq_city": "上海"}
+      ]
+    }
+  ]
+}

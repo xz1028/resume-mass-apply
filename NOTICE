@@ -1,0 +1,20 @@
+就业海投简历系统（resume-mass-apply）
+Copyright 2026 xz1028
+
+本产品依据 Apache License 2.0 许可证发布（见随附 LICENSE 文件）。
+
+本产品包含以下第三方开源组件（详见 docs/licenses/THIRD_PARTY.md）：
+- FastAPI / Starlette / Pydantic（MIT）
+- Uvicorn（BSD-3）
+- SQLAlchemy（MIT）
+- APScheduler（MIT）
+- httpx（BSD-3）
+- cryptography（Apache-2.0 / BSD-3）
+- PyMuPDF（AGPL 向商业豁免的 Apache-2.0 授权条目，详见 THIRD_PARTY.md 说明）
+- python-docx（MIT）
+- structlog（MIT / Apache-2.0）
+- prometheus-client（Apache-2.0）
+- Vue.js 3 运行时（本地托管，MIT）
+
+演示数据说明：本软件演示模式生成的职位、公司与人物均为虚构演示数据，
+不对应任何真实企业与个人。

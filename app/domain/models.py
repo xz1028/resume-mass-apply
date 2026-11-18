@@ -149,6 +149,8 @@ class JobPosition:
     publish_expire_at: datetime
     fetched_at: datetime
     expired: bool = False
+    jd_text: str | None = None
+    jd_fetched_at: datetime | None = None
 
 
 @dataclass

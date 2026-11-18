@@ -30,10 +30,103 @@ const TaskPage = {
       if (pendingChecklist.value) {
         confirmView.value = pendingChecklist.value;
         pendingChecklist.value = null;
+        prepareGreetingsForTask();
       }
     }
 
+    /* ---------- AI 招呼语交互（进入清单 → prepare → 渐进轮询 → 预览/编辑） ---------- */
+    const greetingsState = reactive({
+      phase: 'idle', allReady: false, status: '', items: [],
+    });
+    const editTarget = ref(null); // { position_id, text }
+    const editDraft = ref('');
+    let greetingsTimer = null;
+
+    async function prepareGreetingsForTask() {
+      if (!confirmView.value) return;
+      greetingsState.phase = 'loading';
+      greetingsState.allReady = false;
+      greetingsState.items = [];
+      try {
+        await prepareGreetings(confirmView.value.task.task_id);
+        startGreetingsPolling();
+      } catch (e) {
+        greetingsState.phase = 'ready';
+        greetingsState.allReady = true;
+      }
+    }
+
+    function startGreetingsPolling() {
+      stopGreetingsPolling();
+      greetingsTimer = setInterval(async () => {
+        if (!confirmView.value) {
+          stopGreetingsPolling();
+          return;
+        }
+        try {
+          const data = await getGreetings(confirmView.value.task.task_id);
+          greetingsState.items = data.items || [];
+          greetingsState.allReady = !!data.all_ready;
+          greetingsState.status = data.status || '';
+          if (greetingsState.allReady) {
+            greetingsState.phase = 'ready';
+            stopGreetingsPolling();
+          } else {
+            greetingsState.phase = 'loading';
+          }
+        } catch (e) {
+          greetingsState.phase = 'ready';
+          greetingsState.allReady = true;
+          stopGreetingsPolling();
+        }
+      }, 3000);
+    }
+
+    function stopGreetingsPolling() {
+      if (greetingsTimer) {
+        clearInterval(greetingsTimer);
+        greetingsTimer = null;
+      }
+    }
+
+    function greetingOf(positionId) {
+      return greetingsState.items.find((g) => g.position_id === positionId) || null;
+    }
+
+    function openEditGreeting(positionId) {
+      const item = greetingOf(positionId);
+      editTarget.value = { position_id: positionId };
+      editDraft.value = item ? (item.text || '') : '';
+    }
+
+    async function saveEditGreeting() {
+      const target = editTarget.value;
+      if (!target || !confirmView.value) return;
+      const text = editDraft.value.trim();
+      if (!text) {
+        showToast('招呼语不能为空', 'failure');
+        return;
+      }
+      try {
+        await editGreeting(confirmView.value.task.task_id, target.position_id, text);
+        showToast('招呼语已保存，投递时将发送该编辑版');
+        editTarget.value = null;
+        const data = await getGreetings(confirmView.value.task.task_id);
+        greetingsState.items = data.items || [];
+      } catch (e) {
+        showToast(errorText(e, 'form'), 'failure');
+      }
+    }
+
+    const GREETING_SOURCE_LABEL = { ai: 'AI', template: '模板', edited: '已编辑' };
+
+    function greetingSourceBadge(source) {
+      const tone = source === 'ai' ? 'badge-blue' : source === 'edited' ? 'badge-green' : 'badge-gray';
+      return { label: GREETING_SOURCE_LABEL[source] || source, tone };
+    }
+
     function cancelChecklist() {
+      stopGreetingsPolling();
       confirmView.value = null;
     }
 
@@ -44,6 +137,7 @@ const TaskPage = {
       try {
         await confirmDeliveryTask(confirmView.value.task.task_id);
         showToast('投递任务已确认，开始执行');
+        stopGreetingsPolling();
         confirmView.value = null;
         await refreshTasks();
         startPolling();
@@ -217,12 +311,15 @@ const TaskPage = {
 
     onUnmounted(() => {
       stopPolling();
+      stopGreetingsPolling();
       document.removeEventListener('visibilitychange', onVisibilityChange);
     });
 
     return {
       confirmView, confirming, confirmModal, platformDistText, expiredPlatforms,
       cancelChecklist, confirmTask,
+      greetingsState, greetingOf, openEditGreeting, saveEditGreeting,
+      editTarget, editDraft, greetingSourceBadge,
       circleForm, circling, startCircleApply,
       tasksState, pollError, refreshTasks,
       cancelTarget, confirmCancel,
@@ -264,12 +361,31 @@ const TaskPage = {
             </tbody>
           </table>
         </div>
+
+        <!-- AI 招呼语预览与编辑 -->
+        <div v-if="greetingsState.items.length || greetingsState.phase === 'loading'" style="margin-top:16px">
+          <div class="row" style="margin-bottom:10px">
+            <span class="card-title" style="margin:0;font-size:15px">打招呼消息（BOSS直聘/模拟平台职位）</span>
+            <span v-if="!greetingsState.allReady" class="badge badge-cyan">生成中 {{ greetingsState.items.length }}/{{ confirmView.task.position_count }}</span>
+            <span v-else class="badge badge-green">已就绪</span>
+          </div>
+          <div v-for="g in greetingsState.items" :key="g.position_id" class="platform-card" style="align-items:flex-start">
+            <div style="flex:1;min-width:0">
+              <div class="row" style="margin-bottom:6px">
+                <span :class="['badge', greetingSourceBadge(g.source).tone]">{{ greetingSourceBadge(g.source).label }}</span>
+              </div>
+              <p class="muted" style="white-space:pre-wrap">{{ g.text }}</p>
+            </div>
+            <button class="btn btn-sm" @click="openEditGreeting(g.position_id)">编辑</button>
+          </div>
+        </div>
         <div class="row" style="margin-top:16px">
           <button class="btn btn-primary" :disabled="confirming" @click="confirmModal = true">
             {{ confirming ? '确认中…' : '确认投递' }}
           </button>
           <button class="btn" @click="cancelChecklist">取消</button>
-          <span class="muted">确认后才开始执行投递；取消不会产生任何投递记录</span>
+          <span v-if="!greetingsState.allReady && greetingsState.items.length" class="muted">招呼语生成中，可不等待直接确认（未就绪职位发送固定模板）</span>
+          <span v-else class="muted">确认后才开始执行投递；取消不会产生任何投递记录</span>
         </div>
       </div>
 
@@ -362,6 +478,19 @@ const TaskPage = {
         @confirm="confirmTask"
         @cancel="confirmModal = false"
       ></modal>
+
+      <!-- 招呼语编辑弹层 -->
+      <div v-if="editTarget" class="modal-mask" @click.self="editTarget = null">
+        <div class="modal-box" style="max-width:520px">
+          <h3 class="modal-title">编辑打招呼消息</h3>
+          <textarea class="input" rows="5" style="width:100%;resize:vertical" v-model="editDraft" maxlength="500"></textarea>
+          <p class="muted" style="margin-top:6px">{{ editDraft.length }}/200 字（超长将被截断并剔除联系方式）</p>
+          <div class="modal-actions" style="margin-top:14px">
+            <button class="btn" @click="editTarget = null">取消</button>
+            <button class="btn btn-primary" @click="saveEditGreeting">保存</button>
+          </div>
+        </div>
+      </div>
 
       <modal
         v-if="cancelTarget"

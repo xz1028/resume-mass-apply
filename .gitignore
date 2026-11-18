@@ -1,12 +1,15 @@
 # 运行时数据（含数据库、AES 密钥、加密简历、服务日志）—— 绝不入库
 data/
 
+# 构建与发布产物
+build/
+release/
+dist/
+
 # Python 构建产物
 __pycache__/
 *.py[cod]
 *.egg-info/
-build/
-dist/
 .venv/
 venv/
 
@@ -19,6 +22,9 @@ htmlcov/
 # 本地环境配置（含真实凭证时勿提交；.env.example 为安全模板）
 .env
 
+# 浏览器组件用户数据目录（授权会话缓存）
+data/browser_profiles/
+
 # IDE
 .idea/
 .vscode/
@@ -26,7 +32,7 @@ htmlcov/
 
 # 前端临时校验产物
 *.png
-!app/static/**/*.png
+!docs/assets/**/*.png
 
 # 系统文件
 Thumbs.db

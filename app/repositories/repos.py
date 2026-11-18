@@ -201,6 +201,8 @@ class PositionRepository:
             publish_expire_at=row.publish_expire_at,
             fetched_at=row.fetched_at,
             expired=row.expired,
+            jd_text=row.jd_text,
+            jd_fetched_at=row.jd_fetched_at,
         )
 
     def upsert(self, position: JobPosition) -> JobPosition:
@@ -225,6 +227,8 @@ class PositionRepository:
                 publish_expire_at=position.publish_expire_at,
                 fetched_at=position.fetched_at,
                 expired=position.expired,
+                jd_text=position.jd_text,
+                jd_fetched_at=position.jd_fetched_at,
             )
             self._session.add(row)
         else:
@@ -238,6 +242,9 @@ class PositionRepository:
             row.publish_expire_at = position.publish_expire_at
             row.fetched_at = position.fetched_at
             row.expired = position.expired
+            if position.jd_text is not None:
+                row.jd_text = position.jd_text
+                row.jd_fetched_at = position.jd_fetched_at
         self._session.flush()
         return self._to_domain(row)
 
@@ -331,6 +338,13 @@ class PositionRepository:
             or 0
         )
 
+    def delete_position(self, position_id: str) -> None:
+        """演示模式清除专用：按职位 ID 物理删除（仅用于 demo_x_ 前缀演示职位）。"""
+        self._session.execute(
+            delete(JobPositionRow).where(JobPositionRow.position_id == position_id)
+        )
+        self._session.flush()
+
 
 class TaskRepository:
     def __init__(self, session: Session) -> None:
@@ -393,6 +407,13 @@ class TaskRepository:
             update(DeliveryTaskRow)
             .where(DeliveryTaskRow.task_id == task_id)
             .values(success_count=success, failed_count=failed, skipped_count=skipped)
+        )
+        self._session.flush()
+
+    def delete_task(self, task_id: str) -> None:
+        """演示模式清除专用：按任务 ID 物理删除任务行（记录由 RecordRepository 单独清除）。"""
+        self._session.execute(
+            delete(DeliveryTaskRow).where(DeliveryTaskRow.task_id == task_id)
         )
         self._session.flush()
 
@@ -544,6 +565,13 @@ class RecordRepository:
             update(DeliveryRecordRow)
             .where(DeliveryRecordRow.record_id == record_id)
             .values(resume_snapshot=snapshot.to_dict())
+        )
+        self._session.flush()
+
+    def delete_record(self, record_id: str) -> None:
+        """演示模式清除专用：按记录 ID 物理删除（不入同步队列的演示数据）。"""
+        self._session.execute(
+            delete(DeliveryRecordRow).where(DeliveryRecordRow.record_id == record_id)
         )
         self._session.flush()
 
@@ -731,3 +759,9 @@ class SettingRepository:
         else:
             row.value = value
         self._session.flush()
+    def delete(self, key: str) -> None:
+        """演示模式标记清除专用：按键删除 KV 行。"""
+        row = self._session.get(AppSettingRow, key)
+        if row is not None:
+            self._session.delete(row)
+            self._session.flush()

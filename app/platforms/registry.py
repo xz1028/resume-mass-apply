@@ -23,10 +23,29 @@ class AdapterRegistry:
         self._recovery_callbacks: list[Callable[[str], None]] = []
 
     def register(self, adapter: PlatformAdapter, name: str | None = None) -> None:
+        existing = self._adapters.get(adapter.platform_id)
+        if existing is not None and existing is not adapter:
+            logger.warning(
+                "platform_id_conflict",
+                platform_id=adapter.platform_id,
+                reason="平台标识冲突：同 ID 且非同一实例，拒绝注册",
+            )
+            raise RuntimeError(f"平台标识冲突，拒绝注册: {adapter.platform_id}")
         self._adapters[adapter.platform_id] = adapter
         self._names[adapter.platform_id] = name or adapter.platform_id
         self._consecutive_failures.setdefault(adapter.platform_id, 0)
         logger.info("platform_registered", platform_id=adapter.platform_id)
+
+    def unregister(self, platform_id: str) -> bool:
+        """移除平台成员（启停联动用）：上层 list_all()/get() 即时感知，历史数据不受影响。"""
+        if platform_id not in self._adapters:
+            return False
+        del self._adapters[platform_id]
+        self._names.pop(platform_id, None)
+        self._degraded.pop(platform_id, None)
+        self._consecutive_failures.pop(platform_id, None)
+        logger.info("platform_unregistered", platform_id=platform_id)
+        return True
 
     def get(self, platform_id: str) -> PlatformAdapter | None:
         return self._adapters.get(platform_id)

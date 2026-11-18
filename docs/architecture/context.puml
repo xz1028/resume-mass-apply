@@ -1,0 +1,23 @@
+@startuml
+title 就业海投简历系统 - 系统上下文图
+
+actor 求职者 as user
+participant "就业海投简历系统\n（单机软件：FastAPI + Vue3 + SQLite）" as system
+participant "招聘平台\n（模拟 / BOSS直聘 / 智联 / 前程无忧）" as platforms
+participant "大模型服务\n（DeepSeek / 磐古 / ... / 本地 Ollama）" as llm
+
+user -> system : 上传简历 / 配置意向 / 勾选职位 / 确认投递
+system -> user : 推荐列表 / 投递进度 / 状态跟踪 / 统计报告
+
+system -> platforms : 浏览器自动化拉取职位 / 执行投递 / 查询状态
+platforms -> system : 职位数据 / 投递回执 / 风控信号（转人工）
+
+system -> llm : 脱敏简历 + JD（匹配评分 / 招呼语生成）
+llm -> system : 匹配度 + 理由 / 定制招呼语
+
+note over system
+  数据全部保存在本机 data/ 目录
+  简历与凭证 AES-256-GCM 加密存储
+  模拟平台演示旅程不需要任何外部服务
+end note
+@enduml

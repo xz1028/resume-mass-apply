@@ -44,6 +44,34 @@ class Settings(BaseSettings):
     # 通知
     notification_enabled: bool = True
 
+    # 真实招聘平台接入（浏览器自动化）
+    browser_channel_order: list[str] = Field(default_factory=lambda: ["msedge", "chrome"])
+    captcha_wait_timeout_seconds: int = 600
+    browser_idle_recycle_seconds: int = 600
+    browser_patrol_interval_seconds: int = 60
+    browser_command_throttle_seconds: tuple[int, int] = (2, 5)
+    delivery_hard_limit_per_hour: int = 30
+    real_platform_default_rate_per_hour: float = 20.0
+    real_platform_fetch_interval_floor_hours: int = 12
+    pending_events_poll_seconds: int = 30
+    recovery_probe_interval_seconds: int = 3600
+    browser_profiles_dir: Path = Path("data/browser_profiles")
+
+    # AI 智能匹配与招呼语
+    ai_match_cache_ttl_seconds: int = 24 * 3600
+    ai_greeting_cache_ttl_seconds: int = 24 * 3600
+    ai_concurrency: int = 3
+    ai_cache_capacity: int = 2000
+    ai_call_log_capacity: int = 2000
+    ai_batch_task_retention: int = 32
+    ai_input_insufficient_threshold_chars: int = 200
+    ai_config_cooldown_seconds: int = 600
+    ai_matching_task_idempotent_window_seconds: int = 60
+
+    # 演示模式一键开箱（默认 off：源码/测试形态演示注入永不触发；
+    # 仅绿色包启动器注入 RMA_DEMO_MODE=auto 时启用——142 项既有测试零影响红线）
+    demo_mode: str = "off"
+
     @field_validator("job_fetch_interval_hours")
     @classmethod
     def _validate_fetch_interval(cls, v: int) -> int:

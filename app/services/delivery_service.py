@@ -198,7 +198,7 @@ class DeliveryService:
                 candidates = [
                     item["position"]
                     for item in scored
-                    if (item["match_score"] or 0) >= min_score
+                    if (item.get("effective_score") if item.get("effective_score") is not None else (item["match_score"] or 0)) >= min_score
                 ]
             else:
                 candidates, _total = pos_repo.list_active(page=1, page_size=100000)
@@ -475,11 +475,14 @@ class DeliveryService:
         )
         attempts = 1 + settings.retry_max_attempts
         backoffs = settings.retry_backoff_seconds or [5, 15]
+        final_greeting = self._read_final_greeting(task.task_id, position.position_id)
         for attempt in range(attempts):
             if task.task_id in _cancel_flags:
                 return
             try:
-                result = adapter.submit_application(pos_dto, resume_ref, contact)
+                result = await asyncio.to_thread(
+                    adapter.submit_application, pos_dto, resume_ref, contact, final_greeting
+                )
             except PlatformAuthExpiredError:
                 raise
             except PlatformRateLimitedError as exc:
@@ -515,6 +518,23 @@ class DeliveryService:
                 self._session.commit()
                 return
             now = datetime.now()
+            if result.success is False:
+                record_repo.update_status(
+                    record.record_id,
+                    DeliveryStatus.failed,
+                    now,
+                    failure_reason=result.failure_reason or "平台返回投递失败",
+                )
+                self._session.commit()
+                inc_delivery_attempt(platform_id, "failed")
+                logger.warning(
+                    "delivery_attempt",
+                    platform_id=platform_id,
+                    position_id=position.position_id,
+                    result="failed",
+                    reason=result.failure_reason or "平台返回投递失败",
+                )
+                return
             record_repo.update_status(
                 record.record_id,
                 DeliveryStatus.delivered,
@@ -532,6 +552,24 @@ class DeliveryService:
                 reason="",
             )
             return
+
+    @staticmethod
+    def _read_final_greeting(task_id: str, position_id: str) -> str | None:
+        """读取该职位最终招呼语（编辑版 > AI 生成版 > None）。
+
+        独立会话毫秒级同步读取；AI 组件不可用/异常时返回 None，
+        适配器内部固定模板兜底（与既有行为一致，不改投递成功/失败判定）。
+        """
+        try:
+            session = get_database().session()
+            try:
+                from app.ai.greeting.service import GreetingService
+
+                return GreetingService(session).final_greeting(task_id, position_id)
+            finally:
+                session.close()
+        except Exception:  # noqa: BLE001
+            return None
 
     @staticmethod
     def _log_skip(records: list[DeliveryRecord], message: str) -> int:

@@ -77,3 +77,51 @@ class PlatformDegradedError(AppError):
 class NotFoundError(AppError):
     def __init__(self, message: str = "资源不存在") -> None:
         super().__init__(40401, message, 404)
+
+class RiskUnconfirmedError(AppError):
+    def __init__(self, message: str = "请先阅读并确认平台接入风险告知") -> None:
+        super().__init__(42001, message, 403)
+
+
+class PlatformAlreadyAuthorizedError(AppError):
+    def __init__(self, message: str = "该平台已绑定授权凭证，请先撤销后再授权") -> None:
+        super().__init__(42002, message, 409)
+
+
+class RatePolicyExceededError(AppError):
+    def __init__(self, message: str = "限流设置超过安全上限（投递 ≤30/小时）") -> None:
+        super().__init__(42003, message, 422)
+
+
+class AuthSessionConflictError(AppError):
+    def __init__(self, message: str = "授权会话冲突或已终态") -> None:
+        super().__init__(42004, message, 409)
+
+class AiModelConfigNotFoundError(AppError):
+    def __init__(self, message: str = "AI 模型配置不存在") -> None:
+        super().__init__(43001, message, 404)
+
+
+class AiConfigNameConflictError(AppError):
+    def __init__(self, message: str = "已存在同名模型配置") -> None:
+        super().__init__(43002, message, 409)
+
+
+class AiApiKeyRequiredError(AppError):
+    def __init__(self, message: str = "云端服务商必须配置您自己的 API Key") -> None:
+        super().__init__(43003, message, 422)
+
+
+class AiConfigNotTestedError(AppError):
+    def __init__(self, message: str = "激活前需先通过连通性测试（或明确确认强制激活）") -> None:
+        super().__init__(43004, message, 409)
+
+
+class GreetingEditConflictError(AppError):
+    def __init__(self, message: str = "任务已确认或已终态，招呼语不可再编辑") -> None:
+        super().__init__(43005, message, 409)
+
+
+class GreetingTooLongError(AppError):
+    def __init__(self, message: str = "招呼语超过长度上限") -> None:
+        super().__init__(43006, message, 422)

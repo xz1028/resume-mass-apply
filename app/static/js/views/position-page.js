@@ -100,6 +100,97 @@ const PositionPage = {
       needResume: false, loaded: false,
     });
 
+    /* ---------- AI 渐进增强（D2：后端批任务 + 前端 3-5s 轮询，不阻塞首屏） ---------- */
+    const aiState = reactive({
+      active: false, taskId: '', status: '', done: 0, total: 0,
+      summary: 'off', degradeMessage: '', scores: {}, reasons: {},
+      scoreView: 'ai',
+    });
+    let aiPollTimer = null;
+
+    async function startAiEnhancement() {
+      stopAiPolling();
+      const status = (store.aiStatus && store.aiStatus.state) || 'off';
+      if (status !== 'ready') return;
+      try {
+        const task = await createAiMatchingTask(50);
+        if (task.status === 'rejected') {
+          aiState.degradeMessage = task.degrade_message || 'AI 暂不可用，已使用规则匹配';
+          return;
+        }
+        aiState.taskId = task.task_id;
+        aiState.total = task.total || 0;
+        aiState.status = task.status;
+        aiState.active = true;
+        startAiPolling();
+      } catch (e) { /* AI 发起失败静默：规则分列表不受影响 */ }
+    }
+
+    function startAiPolling() {
+      stopAiPolling();
+      aiPollTimer = setInterval(async () => {
+        if (!aiState.taskId || !aiState.active) return;
+        try {
+          const task = await getAiMatchingTask(aiState.taskId);
+          aiState.status = task.status;
+          aiState.done = task.done || 0;
+          aiState.total = task.total || 0;
+          aiState.summary = task.ai_state_summary || 'off';
+          if (task.degrade_message) aiState.degradeMessage = task.degrade_message;
+          if (Array.isArray(task.items)) {
+            for (const item of task.items) {
+              if (item.status === 'ok' && item.ai_score != null) {
+                aiState.scores[item.position_id] = item.ai_score;
+                aiState.reasons[item.position_id] = item.reason || '';
+              }
+            }
+            if (recommendState.items.length) {
+              recommendState.items = [...recommendState.items];
+            }
+          }
+          if (['completed', 'rejected', 'cancelled'].indexOf(task.status) >= 0) {
+            stopAiPolling();
+          }
+        } catch (e) {
+          if (e && e.code === 40401) stopAiPolling();
+        }
+      }, 3500);
+    }
+
+    function stopAiPolling() {
+      if (aiPollTimer) {
+        clearInterval(aiPollTimer);
+        aiPollTimer = null;
+      }
+    }
+
+    const aiCount = computed(() => Object.keys(aiState.scores).length);
+
+    const aiBanner = computed(() => {
+      if (!aiState.active && !aiState.degradeMessage) return '';
+      if (aiState.degradeMessage) return aiState.degradeMessage;
+      if (aiState.summary === 'all_fallback') return 'AI 暂不可用，已使用规则匹配与固定模板招呼语';
+      return '';
+    });
+
+    function effectiveScoreOf(item) {
+      if (aiState.scoreView === 'rule') return item.match_score;
+      const ai = aiState.scores[item.position_id];
+      return ai != null ? ai : item.match_score;
+    }
+
+    function hasAiScore(item) {
+      return aiState.scores[item.position_id] != null;
+    }
+
+    const sortedRecommendItems = computed(() => {
+      if (!recommendState.items.length) return recommendState.items;
+      if (aiState.scoreView !== 'ai' || !aiCount.value) return recommendState.items;
+      return [...recommendState.items].sort(
+        (a, b) => (effectiveScoreOf(b) || 0) - (effectiveScoreOf(a) || 0)
+      );
+    });
+
     async function loadRecommendations() {
       recommendState.phase = 'loading';
       recommendState.needResume = false;
@@ -110,6 +201,7 @@ const PositionPage = {
         recommendState.message = data.message || '';
         recommendState.loaded = true;
         recommendState.phase = recommendState.items.length > 0 ? 'ready' : 'empty';
+        startAiEnhancement();
       } catch (e) {
         if (e && e.name === 'AbortError') return;
         if (e && e.code === 40401) {
@@ -227,12 +319,14 @@ const PositionPage = {
     onUnmounted(() => {
       if (searchController) searchController.abort();
       clearTimeout(debounceTimer);
+      stopAiPolling();
     });
 
     return {
       viewMode, filters,
       positionsState, onFilterInput, onPageChange, loadPositions,
       recommendState, loadRecommendations, switchView,
+      aiState, aiCount, aiBanner, effectiveScoreOf, hasAiScore, sortedRecommendItems,
       thresholdForm, savingThreshold, saveThreshold,
       selected, selectedCount, toggleSelect, creatingTask, startBatchApply,
       blacklistTarget, askBlacklistCompany, askBlacklistKeyword, confirmBlacklist,
@@ -380,6 +474,10 @@ const PositionPage = {
         </template>
 
         <template v-else>
+          <div v-if="aiBanner" class="banner banner-warn">{{ aiBanner }}</div>
+          <div v-else-if="aiState.active && aiCount > 0 && aiState.status !== 'completed'" class="banner banner-info">
+            AI 评分进行中：已完成 {{ aiCount }} 个职位，评分将自动刷新与重排序
+          </div>
           <loading-skeleton v-if="recommendState.phase === 'loading'" :rows="6"></loading-skeleton>
           <empty-state
             v-else-if="recommendState.phase === 'error' && recommendState.needResume"
@@ -393,32 +491,47 @@ const PositionPage = {
             @retry="loadRecommendations"
           ></error-banner>
           <empty-state v-else-if="recommendState.phase === 'empty'" message="暂无推荐职位"></empty-state>
-          <table v-else class="table">
-            <thead>
-              <tr>
-                <th></th>
-                <th v-if="!recommendState.unavailable">匹配度</th>
-                <th>职位名称</th><th>公司</th><th>城市</th><th>薪资</th><th>平台</th><th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="p in recommendState.items" :key="p.position_id">
-                <td><input type="checkbox" :checked="selected.has(p.position_id)" @change="toggleSelect(p.position_id)"></td>
-                <td v-if="!recommendState.unavailable"><span class="match-score">{{ p.match_score }}</span></td>
-                <td>{{ p.title }}</td>
-                <td>{{ p.company }}</td>
-                <td>{{ p.city }}</td>
-                <td>{{ salaryText(p.salary_min, p.salary_max) }}</td>
-                <td>{{ p.platform_id }}</td>
-                <td>
-                  <div class="cell-actions">
-                    <button class="btn btn-sm" @click="askBlacklistCompany(p)">拉黑公司</button>
-                    <button class="btn btn-sm" @click="askBlacklistKeyword(p)">拉黑职位</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <template v-else>
+            <div v-if="aiCount > 0" class="row" style="margin-bottom:10px">
+              <span class="muted">评分视图</span>
+              <button :class="['btn', 'btn-sm', aiState.scoreView === 'ai' ? 'btn-primary' : '']" @click="aiState.scoreView = 'ai'">AI 评分（{{ aiCount }}）</button>
+              <button :class="['btn', 'btn-sm', aiState.scoreView === 'rule' ? 'btn-primary' : '']" @click="aiState.scoreView = 'rule'">规则评分</button>
+            </div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th v-if="!recommendState.unavailable">匹配度</th>
+                  <th v-if="aiCount > 0">评分理由</th>
+                  <th>职位名称</th><th>公司</th><th>城市</th><th>薪资</th><th>平台</th><th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in sortedRecommendItems" :key="p.position_id">
+                  <td><input type="checkbox" :checked="selected.has(p.position_id)" @change="toggleSelect(p.position_id)"></td>
+                  <td v-if="!recommendState.unavailable">
+                    <span class="match-score">{{ effectiveScoreOf(p) }}</span>
+                    <span v-if="hasAiScore(p) && aiState.scoreView === 'ai'" class="badge badge-blue" style="margin-left:4px">AI</span>
+                    <span v-else-if="aiCount > 0" class="badge badge-gray" style="margin-left:4px">规则</span>
+                  </td>
+                  <td v-if="aiCount > 0" class="muted" style="max-width:260px">
+                    {{ aiState.reasons[p.position_id] || (hasAiScore(p) ? '' : '—') }}
+                  </td>
+                  <td>{{ p.title }}</td>
+                  <td>{{ p.company }}</td>
+                  <td>{{ p.city }}</td>
+                  <td>{{ salaryText(p.salary_min, p.salary_max) }}</td>
+                  <td>{{ p.platform_id }}</td>
+                  <td>
+                    <div class="cell-actions">
+                      <button class="btn btn-sm" @click="askBlacklistCompany(p)">拉黑公司</button>
+                      <button class="btn btn-sm" @click="askBlacklistKeyword(p)">拉黑职位</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </template>
         </template>
       </div>
 

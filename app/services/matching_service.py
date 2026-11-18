@@ -91,9 +91,21 @@ class MatchingService:
         return {"matching_unavailable": False, "message": None, "items": items[:top_n]}
 
     def scored_positions(self, user_id: str) -> list[dict]:
-        """全量职位匹配评分（供条件圈选），复用推荐缓存。"""
+        """全量职位匹配评分（供条件圈选），复用推荐缓存。
+
+        叠加 effective_score 字段（AI 评分优先，无 AI/降级时等于规则分）：
+        match_score 字段语义与推荐排序行为完全不变。
+        """
         result = self.get_recommendations(user_id, top_n=10**6)
-        return result["items"]
+        items = result["items"]
+        try:
+            from app.ai.effective import overlay_effective_scores
+
+            overlay_effective_scores(self._session, user_id, items)
+        except Exception:  # noqa: BLE001
+            for item in items:
+                item.setdefault("effective_score", item.get("match_score") or 0)
+        return items
 
     def set_threshold(self, threshold: int) -> int:
         if not 0 <= threshold <= 100:

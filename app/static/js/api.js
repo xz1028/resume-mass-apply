@@ -269,6 +269,145 @@ function revokePlatform(platformId) {
   return request('/api/v1/platforms/' + encodeURIComponent(platformId) + '/authorization', { method: 'DELETE' });
 }
 
+/* ==================== 平台接入治理（真实平台） ==================== */
+
+/** 24. 接入配置列表 @returns {Promise<Array<AccessConfig>>} */
+function listAccessConfigs(signal) {
+  return request('/api/v1/platform-access', { signal });
+}
+
+/** 25. 确认风险告知（幂等） @returns {Promise<null>} */
+function confirmAccessRisk(platformId) {
+  return request('/api/v1/platform-access/' + encodeURIComponent(platformId) + '/risk-confirmation', { method: 'POST' });
+}
+
+/** 26. 启用平台 @returns {Promise<{platform_id: string, enabled: boolean}>} */
+function enableRealPlatform(platformId) {
+  return request('/api/v1/platform-access/' + encodeURIComponent(platformId) + '/enable', { method: 'POST' });
+}
+
+/** 27. 禁用平台 @returns {Promise<{platform_id: string, enabled: boolean}>} */
+function disableRealPlatform(platformId) {
+  return request('/api/v1/platform-access/' + encodeURIComponent(platformId) + '/disable', { method: 'POST' });
+}
+
+/**
+ * 28. 设置投递限流（安全上限 30/h）
+ * @param {number} ratePerHour
+ * @returns {Promise<{platform_id: string, delivery_rate_per_hour: number}>}
+ */
+function updateRatePolicy(platformId, ratePerHour) {
+  return request('/api/v1/platform-access/' + encodeURIComponent(platformId) + '/rate-policy', {
+    method: 'PUT', body: { delivery_rate_per_hour: ratePerHour },
+  });
+}
+
+/** 29. 创建浏览器授权会话 @returns {Promise<AuthSession>} */
+function createBrowserAuthorization(platformId) {
+  return request('/api/v1/platform-access/' + encodeURIComponent(platformId) + '/browser-authorization', { method: 'POST' });
+}
+
+/** 30. 轮询浏览器授权会话 @returns {Promise<AuthSession>} */
+function pollBrowserAuthorization(platformId, sessionId) {
+  return request('/api/v1/platform-access/' + encodeURIComponent(platformId) + '/browser-authorization/' + encodeURIComponent(sessionId));
+}
+
+/** 31. 取消授权会话 @returns {Promise<null>} */
+function cancelBrowserAuthorization(platformId, sessionId) {
+  return request('/api/v1/platform-access/' + encodeURIComponent(platformId) + '/browser-authorization/' + encodeURIComponent(sessionId) + '/cancel', { method: 'POST' });
+}
+
+/** 32. 待处理事件（挑战+风险事件，读取即告知） @returns {Promise<{challenges: Array, risk_events: Array}>} */
+function getPendingEvents(signal) {
+  return request('/api/v1/platform-access/pending-events', { signal });
+}
+
+/** 33. 验证码前往处理 @returns {Promise<{challenge_id: string, status: string, message: string}>} */
+function handleCaptchaChallenge(platformId, challengeId) {
+  return request('/api/v1/platform-access/' + encodeURIComponent(platformId) + '/captcha-challenges/' + encodeURIComponent(challengeId) + '/handle', { method: 'POST' });
+}
+
+/* ==================== AI 智能匹配与招呼语 ==================== */
+
+/** 34. 模型配置列表（Key 不回显，仅 has_api_key） @returns {Promise<Array>} */
+function listAiModelConfigs(signal) {
+  return request('/api/v1/ai/model-configs', { signal });
+}
+
+/** 35. 新建模型配置 @returns {Promise<Object>} */
+function createAiModelConfig(config) {
+  return request('/api/v1/ai/model-configs', { method: 'POST', body: config });
+}
+
+/** 36. 更新模型配置（api_key 缺省=保留密文） @returns {Promise<Object>} */
+function updateAiModelConfig(configId, patch) {
+  return request('/api/v1/ai/model-configs/' + encodeURIComponent(configId), { method: 'PUT', body: patch });
+}
+
+/** 37. 删除模型配置（仅未激活） @returns {Promise<null>} */
+function deleteAiModelConfig(configId) {
+  return request('/api/v1/ai/model-configs/' + encodeURIComponent(configId), { method: 'DELETE' });
+}
+
+/** 38. 连通性测试（draft_key 不落库） @returns {Promise<{status, message, duration_ms}>} */
+function testAiModelConfig(configId, draftKey) {
+  return request('/api/v1/ai/model-configs/' + encodeURIComponent(configId) + '/test', {
+    method: 'POST',
+    body: draftKey ? { draft_key: draftKey } : {},
+  });
+}
+
+/** 39. 激活模型配置（单激活） @returns {Promise<Object>} */
+function activateAiModelConfig(configId, force) {
+  return request('/api/v1/ai/model-configs/' + encodeURIComponent(configId) + '/activate', {
+    method: 'POST',
+    body: { force: !!force },
+  });
+}
+
+/** 40. AI 设置读取 @returns {Promise<Object>} */
+function getAiSettings(signal) {
+  return request('/api/v1/ai/settings', { signal });
+}
+
+/** 41. AI 设置更新 @returns {Promise<Object>} */
+function updateAiSettings(settings) {
+  return request('/api/v1/ai/settings', { method: 'PUT', body: settings });
+}
+
+/** 42. AI 状态（四态 + 激活配置名） @returns {Promise<{state, message, active_config_name, provider}>} */
+function getAiStatus(signal) {
+  return request('/api/v1/ai/status', { signal });
+}
+
+/** 43. 发起 AI 匹配批任务（202 毫秒级；rejected 不报错） @returns {Promise<Object>} */
+function createAiMatchingTask(topN) {
+  return request('/api/v1/ai/matching-tasks', { method: 'POST', query: { top_n: topN || 50 } });
+}
+
+/** 44. 查询 AI 匹配任务（增量结果，轮询 3-5s） @returns {Promise<Object>} */
+function getAiMatchingTask(taskId, signal) {
+  return request('/api/v1/ai/matching-tasks/' + encodeURIComponent(taskId), { signal });
+}
+
+/** 45. 准备招呼语（202 毫秒级，后台生成） @returns {Promise<Object>} */
+function prepareGreetings(deliveryTaskId) {
+  return request('/api/v1/ai/delivery-tasks/' + encodeURIComponent(deliveryTaskId) + '/greetings/prepare', { method: 'POST' });
+}
+
+/** 46. 查询招呼语（渐进） @returns {Promise<{all_ready, status, items}>} */
+function getGreetings(deliveryTaskId, signal) {
+  return request('/api/v1/ai/delivery-tasks/' + encodeURIComponent(deliveryTaskId) + '/greetings', { signal });
+}
+
+/** 47. 编辑招呼语（43005/43006 映射） @returns {Promise<Object>} */
+function editGreeting(deliveryTaskId, positionId, text) {
+  return request(
+    '/api/v1/ai/delivery-tasks/' + encodeURIComponent(deliveryTaskId) + '/greetings/' + encodeURIComponent(positionId),
+    { method: 'PUT', body: { text } }
+  );
+}
+
 /** 健康探测（启动判定） @returns {Promise<{status: string}>} */
 function checkHealth() {
   return request('/health', { timeoutMs: 5000 });

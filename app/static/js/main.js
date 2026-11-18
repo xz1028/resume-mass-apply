@@ -9,15 +9,18 @@ const { createApp, computed: vueComputed } = Vue;
 const App = {
   components: {
     GlobalNav,
+    DemoBanner,
     Toast,
     ResumePage,
     PositionPage,
     TaskPage,
     RecordPage,
     PlatformPage,
+    AiConfigPage,
   },
   setup() {
     const currentView = vueComputed(() => routeTable[currentRoute.value] || ResumePage);
+    const aiState = vueComputed(() => (store.aiStatus ? store.aiStatus.state : ''));
 
     function onChangeNav(path) {
       navigate(path);
@@ -31,6 +34,7 @@ const App = {
       store,
       hasResume,
       authAlert,
+      aiState,
       currentRoute,
       currentView,
       toasts,
@@ -49,7 +53,8 @@ const App = {
       <p>正在连接本地服务，请稍候…</p>
     </div>
     <div v-else class="app-shell">
-      <global-nav :current="currentRoute" :alert="authAlert" @change="onChangeNav"></global-nav>
+      <demo-banner></demo-banner>
+      <global-nav :current="currentRoute" :alert="authAlert" :ai-state="aiState" @change="onChangeNav"></global-nav>
       <main class="app-content">
         <component :is="currentView" :key="currentRoute"></component>
       </main>
@@ -87,6 +92,7 @@ registerRoutes([
   { path: '#/tasks', view: TaskPage },
   { path: '#/records', view: RecordPage },
   { path: '#/settings', view: PlatformPage },
+  { path: '#/ai-config', view: AiConfigPage },
 ]);
 
 const app = createApp(App);

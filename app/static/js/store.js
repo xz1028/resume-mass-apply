@@ -10,6 +10,8 @@ const store = reactive({
   resumeCount: 0,
   /** @type {Array<Platform>} */
   platforms: [],
+  /** @type {{state: 'off'|'ready'|'degraded_cooldown'|'degraded_transient', message: string, active_config_name: string|null}|null} */
+  aiStatus: null,
 });
 
 /** 是否已有简历档案（首页判定与投递入口置灰依据） */
@@ -22,12 +24,14 @@ const authAlert = computed(() =>
 
 /** 并行拉取简历列表与平台状态，更新全局信号（简历增删、授权变更后调用） */
 async function refreshGlobalSignals() {
-  const [resumes, platforms] = await Promise.all([
+  const [resumes, platforms, aiStatus] = await Promise.all([
     listResumes().catch(() => null),
     listPlatforms().catch(() => null),
+    (typeof getAiStatus === 'function' ? getAiStatus().catch(() => null) : Promise.resolve(null)),
   ]);
   if (Array.isArray(resumes)) store.resumeCount = resumes.length;
   if (Array.isArray(platforms)) store.platforms = platforms;
+  if (aiStatus && typeof aiStatus.state === 'string') store.aiStatus = aiStatus;
 }
 
 /* ---------- Toast 全局通道 ---------- */

@@ -12,9 +12,13 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1 import (
+    ai,
     blacklist,
+    browser_component,
+    demo_mode,
     delivery_records,
     delivery_tasks,
+    platform_access,
     platforms,
     positions,
     profile,
@@ -36,6 +40,23 @@ DEFAULT_PARTIAL_INDEX = (
     "ON resume_profiles(user_id) WHERE is_default = 1"
 )
 
+AI_ACTIVE_UNIQUE_INDEX = (
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_ai_config_active "
+    "ON ai_model_configs(is_active) WHERE is_active = 1"
+)
+
+JD_COLUMNS = ("jd_text", "jd_fetched_at")
+
+
+def _ensure_position_jd_columns(conn) -> None:
+    """存量库轻量迁移：job_positions 缺 JD 列则 ALTER 补列（可空，旧行零影响）。"""
+    rows = conn.exec_driver_sql("PRAGMA table_info(job_positions)").fetchall()
+    existing = {row[1] for row in rows}
+    if "jd_text" not in existing:
+        conn.exec_driver_sql("ALTER TABLE job_positions ADD COLUMN jd_text TEXT")
+    if "jd_fetched_at" not in existing:
+        conn.exec_driver_sql("ALTER TABLE job_positions ADD COLUMN jd_fetched_at DATETIME")
+
 
 def _init_storage() -> None:
     """建表 + 数据库层唯一默认约束（部分唯一索引）。"""
@@ -44,6 +65,8 @@ def _init_storage() -> None:
     try:
         with database.engine.connect() as conn:
             conn.exec_driver_sql(DEFAULT_PARTIAL_INDEX)
+            conn.exec_driver_sql(AI_ACTIVE_UNIQUE_INDEX)
+            _ensure_position_jd_columns(conn)
             conn.commit()
     except Exception:  # noqa: BLE001
         logger.warning("partial_index_skipped", index="ux_default_resume")
@@ -64,9 +87,32 @@ def create_app(*, with_scheduler: bool = True) -> FastAPI:
     async def lifespan(_app: FastAPI):
         _init_storage()
         _register_default_platforms()
+        from app.infra.database import get_database
+        from app.real_platform.access.bootstrap import (
+            bootstrap_real_platforms,
+            shutdown_real_platforms,
+        )
+
+        bootstrap_session = get_database().session()
+        try:
+            bootstrap_real_platforms(bootstrap_session, get_registry())
+        finally:
+            bootstrap_session.close()
+        # 演示模式一键开箱（tasks 2.4）：平台注册完成后、调度器之前注入；
+        # demo_mode 默认 off 即时返回（142 项既有测试零影响）
+        from app.services.demo_mode_service import DemoModeService
+
+        demo_session = get_database().session()
+        try:
+            DemoModeService(demo_session).bootstrap()
+        except Exception:  # noqa: BLE001
+            logger.exception("demo_mode_bootstrap_failed")
+        finally:
+            demo_session.close()
         if with_scheduler:
             start_scheduler()
         yield
+        shutdown_real_platforms()
         if with_scheduler:
             stop_scheduler()
 
@@ -88,6 +134,10 @@ def create_app(*, with_scheduler: bool = True) -> FastAPI:
         delivery_tasks.router,
         delivery_records.router,
         platforms.router,
+        platform_access.router,
+        ai.router,
+        demo_mode.router,
+        browser_component.router,
     ):
         app.include_router(router)
 

@@ -15,6 +15,15 @@ class AuditAction(str, Enum):
     REVOKE_AUTHORIZATION = "revoke_authorization"
     CREATE_DELIVERY_TASK = "create_delivery_task"
     CONFIRM_DELIVERY_TASK = "confirm_delivery_task"
+    PLATFORM_RISK_CONFIRMED = "platform_risk_confirmed"
+    PLATFORM_ENABLED = "platform_enabled"
+    PLATFORM_DISABLED = "platform_disabled"
+    RATE_POLICY_CHANGED = "rate_policy_changed"
+    BROWSER_AUTH_SESSION = "browser_auth_session"
+    AI_KEY_UPDATED = "ai_key_updated"
+    AI_PROVIDER_SWITCHED = "ai_provider_switched"
+    AI_PRIVACY_SETTINGS_CHANGED = "ai_privacy_settings_changed"
+    AI_FEATURE_TOGGLED = "ai_feature_toggled"
 
 
 def record_audit(session: Session, action: AuditAction, detail: str) -> None:

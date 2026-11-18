@@ -75,6 +75,8 @@ class JobPositionRow(Base):
     publish_expire_at: Mapped[datetime] = mapped_column(DateTime)
     fetched_at: Mapped[datetime] = mapped_column(DateTime)
     expired: Mapped[bool] = mapped_column(Boolean, default=False)
+    jd_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    jd_fetched_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class DeliveryTaskRow(Base):
